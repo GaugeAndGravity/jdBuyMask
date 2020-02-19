@@ -485,24 +485,29 @@ def check_stock():
         'callback': callback,
         '_': int(time.time() * 1000),
     }
-    resp = session.get(url=url, params=payload, headers=headers)
-    resptext = resp.text.replace(callback + '(', '').replace(')', '')
-    respjson = json.loads(resptext)
     inStockSkuid = []
     nohasSkuid = []
     abnormalSkuid = []
-    for i in skuids:
-        try:
-            if respjson[i]['StockStateName'] != '无货':
-                inStockSkuid.append(i)
-            else:
-                nohasSkuid.append(i)
-        except Exception as e:
-            abnormalSkuid.append(i)
-    logger.info('检测[%s]个口罩都无货', len(nohasSkuid))
-    if len(abnormalSkuid) > 0:
-        logger.info('[%s]类型口罩查询异常', ','.join(abnormalSkuid))
-    return inStockSkuid
+    try:
+        resp = session.get(url=url, params=payload, headers=headers, timeout=1)
+    except requests.exceptions.ConnectTimeout:
+        logger.info('连接超时')
+    else:
+        resptext = resp.text.replace(callback + '(', '').replace(')', '')
+        respjson = json.loads(resptext)
+        for i in skuids:
+            try:
+                if respjson[i]['StockStateName'] != '无货':
+                    inStockSkuid.append(i)
+                else:
+                    nohasSkuid.append(i)
+            except Exception as e:
+                abnormalSkuid.append(i)
+        logger.info('检测[%s]个口罩都无货', len(nohasSkuid))
+        if len(abnormalSkuid) > 0:
+            logger.info('[%s]类型口罩查询异常', ','.join(abnormalSkuid))
+    finally:
+        return inStockSkuid
 
 
 '''
