@@ -124,7 +124,7 @@ def getUsername():
 
 
 def check_item_stock(itemUrl):
-    response = session.get(itemUrl)
+    response = session.get(itemUrl, timeout=1)
     if (response.text.find('无货') > 0):
         return True
     else:
@@ -498,30 +498,33 @@ def check_stock():
             'callback': callback,
             '_': int(time.time() * 1000),
         }
-        resp = session.get(url=url, params=payload, headers=headers)
-        resptext = resp.text.replace(callback + '(', '').replace(')', '')
-        respjson = json.loads(resptext)
         inStockSkuid = []
         nohasSkuid = []
         abnormalSkuid = []
-        try:
-            if respjson[skuidString]['StockStateName'] != '无货':
-                inStockSkuid.append(skuidString)
-            else:
-                nohasSkuid.append(skuidString)
-        except Exception as e:
-            abnormalSkuid.append(skuidString)
-        # for i in skuids:
-        #     try:
-        #         if respjson[i]['StockStateName'] != '无货':
-        #             inStockSkuid.append(i)
-        #         else:
-        #             nohasSkuid.append(i)
-        #     except Exception as e:
-        #         abnormalSkuid.append(i)
-        logger.info('[%s]类型口罩无货', ','.join(nohasSkuid))
-        if len(abnormalSkuid) > 0:
-            logger.info('[%s]类型口罩查询异常', ','.join(abnormalSkuid))
+        try: resp = session.get(url=url, params=payload, headers=headers, timeout=1)
+        except requests.exceptions.ConnectTimeout:
+            logger.info('连接超时')
+        else:
+            resptext = resp.text.replace(callback + '(', '').replace(')', '')
+            respjson = json.loads(resptext)        
+            try:
+                if respjson[skuidString]['StockStateName'] != '无货':
+                    inStockSkuid.append(skuidString)
+                else:
+                    nohasSkuid.append(skuidString)
+            except Exception as e:
+                abnormalSkuid.append(skuidString)
+            # for i in skuids:
+            #     try:
+            #         if respjson[i]['StockStateName'] != '无货':
+            #             inStockSkuid.append(i)
+            #         else:
+            #             nohasSkuid.append(i)
+            #     except Exception as e:
+            #         abnormalSkuid.append(i)
+            logger.info('[%s]类型口罩无货', ','.join(nohasSkuid))
+            if len(abnormalSkuid) > 0:
+                logger.info('[%s]类型口罩查询异常', ','.join(abnormalSkuid))
     return inStockSkuid
 
 
